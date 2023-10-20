@@ -1,0 +1,61 @@
+pring:
+  application:
+    name:PatientsApplication
+  profiles:
+    active: ${ACTIVE_PROFILE:dev}
+
+  banner:
+    location: banner.txt
+
+  datasource:
+    url:jdbc: postgresql://localhost:5432/gnkDigitalBank_DB
+    username: postgres
+    password: Gnkchou@23081977
+    driver-class-name: org.postgresql.Driver
+    token:
+      signing:
+        key: a77ab20d-846a-43d3-b359-db09477582f1
+
+  jpa:
+    generate-ddl: true
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        globally_quoted_identifiers: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format.sql: true
+    #      properties.hibernate.temp.use_jdbc_metadata_defaults: false
+    mail:
+      host: ${EMAIL_HOST}
+      port: ${EMAIL_PORT}
+      username: ${EMAIL_ID}
+      password: ${EMAIL_PASSWORD}
+      default-encoding: UTF-8
+      properties:
+        mail:
+          mime:
+            charset: UTF
+          smtp:
+            writetimeout: 10000
+            connectiontimeout: 10000
+            timeout: 10000
+            auth: true
+      #            starttls:
+      #              enable: true
+      #              required: true
+      verify:
+        host: ${VERIFY_EMAIL_HOST}
+
+server:
+  port: ${SERVER_PORT:8080}
+application:
+  security:
+  jwt:
+    secret-key: 586B633834416E396D7436753879382F423F4428482B4C6250655367566B5970
+    expiration: 900000 # 15 min in ms
+    refresh-token:
+      exiration: 296000000 # 15 days in ms
