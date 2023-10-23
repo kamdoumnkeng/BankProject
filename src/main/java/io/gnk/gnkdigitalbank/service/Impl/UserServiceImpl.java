@@ -1,30 +1,43 @@
 package io.gnk.gnkdigitalbank.service.Impl;
 
+import io.gnk.gnkdigitalbank.config.JwtTokenProvider;
 import io.gnk.gnkdigitalbank.dto.*;
+import io.gnk.gnkdigitalbank.entities.Role;
 import io.gnk.gnkdigitalbank.entities.User;
 import io.gnk.gnkdigitalbank.repositories.UserRepository;
 import io.gnk.gnkdigitalbank.service.EmailService;
 import io.gnk.gnkdigitalbank.service.UserService;
 import io.gnk.gnkdigitalbank.utils.AccountUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+@Service
 public class UserServiceImpl implements UserService {
-    UserRepository userRepository;
-    EmailService emailService;
-//    TransactionService transactionService;
-//    PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, EmailService emailService) {
-        this.userRepository = userRepository;
-        this.emailService = emailService;
-//        this.transactionService = transactionService;
-//        this.passwordEncoder = passwordEncoder;
-    }
+
+    private UserRepository userRepository;
+    private EmailService emailService;
+//    TransactionService transactionService;
+    private PasswordEncoder passwordEncoder;
+    private AuthenticationManager authenticationManager;
+    private JwtTokenProvider jwtTokenProvider;
 
     public UserServiceImpl() {
+    }
 
+    public UserServiceImpl(UserRepository userRepository, EmailService emailService, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider) {
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Override
@@ -49,10 +62,11 @@ public class UserServiceImpl implements UserService {
                 .accountNumber(AccountUtils.generateAccountNumber())
                 .accountBalance(BigDecimal.ZERO)
                 .email(userRequest.getEmail())
-                //.password(userRequest.getPassword())
+                .password(passwordEncoder.encode(userRequest.getPassword()))
                 .phoneNumber(userRequest.getPhoneNumber())
                 .alternativePhoneNumber(userRequest.getAlternativePhoneNumber())
                 .status("ACTIVE")
+                .role(Role.valueOf("ROLE_ADMIN"))
                 .build();
 
         User savedUser = userRepository.save(newUser);
@@ -74,6 +88,26 @@ public class UserServiceImpl implements UserService {
                         .accountName(savedUser.getFirstName() + " " + savedUser.getLastName() + " " + savedUser.getOtherName())
                         .build())
                 .build();
+    }
+
+    public BankResponse login(LoginDTO loginDTO){
+        Authentication authentication = null;
+        authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword())
+        );
+
+        EmailDetails loginAlert = EmailDetails.builder()
+                .subject("You're logged in!")
+                .recipient(loginDTO.getEmail())
+                .messageBody("You logged into your account. If you did not initiate this request, please contact your bank")
+                .build();
+
+        emailService.sendEmailAlert(loginAlert);
+        return BankResponse.builder()
+                .responseCode("Login Success")
+                .responseMessage(jwtTokenProvider.generateToken(authentication))
+                .build();
+
     }
 
     @Override
